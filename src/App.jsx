@@ -99,23 +99,39 @@ function MultipleChoice({ data, onResult, nextItemKey }) {
 }
 
 function DragMatch({ data, onResult, batch = 6 }) {
-  const subset = useMemo(() => shuffle(data).slice(0,batch), [data,batch]);
-  const [pairs] = useState(() => shuffle(subset.map(p => p.key)));
-  const [targets] = useState(() => shuffle(subset.map(p => p.key)));
-  const [done, setDone] = useState([]);
-  const drop = (srcKey, dstKey) => { const ok = srcKey === dstKey; if (ok) setDone(d => [...new Set([...d, srcKey])]); onResult(dstKey, ok); };
+  const subset = React.useMemo(() => shuffle(data).slice(0, batch), [data, batch]);
+  const [pairs]   = React.useState(() => shuffle(subset.map(p => p.key))); // Sanskrit chips
+  const [targets] = React.useState(() => shuffle(subset.map(p => p.key))); // English drops
+  const [done, setDone] = React.useState([]);
+  const [selected, setSelected] = React.useState(null); // for tap-to-select on mobile
+
+  const handleMatch = (srcKey, dstKey) => {
+    const ok = srcKey === dstKey;
+    if (ok) setDone(d => [...new Set([...d, srcKey])]);
+    onResult(dstKey, ok);
+    setSelected(null);
+  };
+
   return (
     <div className="grid gap-3">
-      <div className="text-sm opacity-70">Drag and drop. Match English to Sanskrit.</div>
+      <div className="text-sm opacity-70">
+        Match English to Sanskrit. Drag on desktop, tap to select on mobile.
+      </div>
       <div className="grid md:grid-cols-2 gap-4">
+        {/* Targets: English boxes */}
         <div className="grid gap-2">
           {targets.map(k => {
             const pose = data.find(p => p.key === k);
             const isDone = done.includes(k);
             return (
-              <div key={k} className={`p-3 rounded-xl border ${isDone ? "bg-emerald-50 dark:bg-emerald-900/40" : "bg-zinc-50 dark:bg-zinc-900"}`}
-                   onDragOver={e => e.preventDefault()}
-                   onDrop={e => drop(e.dataTransfer.getData("text/plain"), k)}>
+              <div key={k}
+                   className={`p-3 rounded-xl border ${isDone ? "bg-emerald-50 dark:bg-emerald-900/40" : "bg-zinc-50 dark:bg-zinc-900"}`}
+                   onDragOver={(e) => e.preventDefault()}
+                   onDrop={(e) => {
+                     const src = e.dataTransfer.getData("text/plain");
+                     handleMatch(src, k);
+                   }}
+                   onClick={() => { if (selected) handleMatch(selected, k); }}>
                 <div className="font-medium">{pose.en}</div>
                 <div className="text-xs opacity-70">{pose.literal}</div>
                 {isDone && <div className="text-sm mt-1">→ {pose.sa}</div>}
@@ -123,14 +139,19 @@ function DragMatch({ data, onResult, batch = 6 }) {
             );
           })}
         </div>
+
+        {/* Sources: Sanskrit chips */}
         <div className="grid gap-2">
           {pairs.map(k => {
             const pose = data.find(p => p.key === k);
             const isDone = done.includes(k);
+            const isSel = selected === k;
             return (
-              <div key={k} draggable={!isDone}
-                   onDragStart={e => e.dataTransfer.setData("text/plain", k)}
-                   className={`p-3 rounded-xl shadow ${isDone ? "opacity-40" : "cursor-grab bg-white dark:bg-zinc-800"}`}>
+              <div key={k}
+                   draggable={!isDone}
+                   onDragStart={(e) => e.dataTransfer.setData("text/plain", k)}
+                   onClick={() => setSelected(isSel ? null : k)}
+                   className={`p-3 rounded-xl shadow select-none ${isDone ? "opacity-40" : "cursor-pointer bg-white dark:bg-zinc-800"} ${isSel && !isDone ? "ring-2 ring-indigo-500" : ""}`}>
                 {pose.sa}
               </div>
             );
