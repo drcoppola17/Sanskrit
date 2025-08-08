@@ -78,10 +78,10 @@ function Flashcards({ data, onResult, nextItemKey }) {
   );
 }
 
-function MultipleChoice({ data, onResult, nextItemKey }) {
+function MultipleChoice({ data, onResult, nextItemKey, onAdvance }) {
   const correct = data.find(p => p.key === nextItemKey) ?? data[0];
 
-  // Lock the 4 options ONLY when the question changes
+  // Lock the options per question:
   const [opts, setOpts] = React.useState([]);
   useEffect(() => {
     const choices = shuffle([
@@ -91,22 +91,20 @@ function MultipleChoice({ data, onResult, nextItemKey }) {
     setOpts(choices);
   }, [correct.key, data]);
 
-  const [wrongPicks, setWrongPicks] = useState(new Set()); // tracks wrong answers
+  const [wrongPicks, setWrongPicks] = useState(new Set());
   const [solved, setSolved] = useState(false);
 
-  // Reset per question
   useEffect(() => { setWrongPicks(new Set()); setSolved(false); }, [correct.key]);
 
   const choose = (opt) => {
     if (solved) return;
     const ok = opt.key === correct.key;
-    onResult(correct.key, ok);
+    onResult(correct.key, ok); // record result (does NOT auto-advance)
     if (ok) {
       setSolved(true);
-      // advance will be triggered by parent changing nextItemKey
-      // (no timeout here; parent picks next question after onResult)
+      setTimeout(() => { onAdvance(); }, 900); // advance ONLY after correct
     } else {
-      setWrongPicks(prev => new Set(prev).add(opt.key));
+      setWrongPicks(prev => new Set(prev).add(opt.key)); // keep it red
     }
   };
 
@@ -121,11 +119,9 @@ function MultipleChoice({ data, onResult, nextItemKey }) {
       <div className="text-sm opacity-70">Multiple choice — Which Sanskrit is “{correct.en}”?</div>
       <div className="grid gap-2">
         {opts.map(o => (
-          <button
-            key={o.key}
-            className={`px-3 py-2 rounded-xl shadow text-left ${btnClass(o)}`}
-            onClick={() => choose(o)}
-          >
+          <button key={o.key}
+                  className={`px-3 py-2 rounded-xl shadow text-left ${btnClass(o)}`}
+                  onClick={() => choose(o)}>
             {o.sa}
           </button>
         ))}
