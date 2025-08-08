@@ -328,7 +328,9 @@ export default function App() {
 
         <section className="grid md:grid-cols-3 gap-4">
           <div className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
-            <div className="text-xs uppercase tracking-wide opacity-60">Pose of the Day</div>
-            <div className="mt-2 text-lg font-semibold">{POSES.find(p=>p.key===todayKey)?.sa}</div>
-            <div className="text-sm opacity-80">{POSES.find(p=>p.key===todayKey)?.en}</div>
-            <div className="text-xs opacity-70
+  <div className="text-xs uppercase tracking-wide opacity-60">Pose of the Day</div>
+  <div className="mt-2 text-lg font-semibold">{POSES.find(p=>p.key===todayKey)?.sa}</div>
+  <div className="text-sm opacity-80">{POSES.find(p=>p.key===todayKey)?.en}</div>
+  <div className="text-xs opacity-70 mt-2">{POSES.find(p=>p.key===todayKey)?.literal}</div>
+</div>
+
