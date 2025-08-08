@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Play, Flag, Swords, Grid2X2, Type, Keyboard } from "lucide-react";
 
-// --- Data
+// ---------- Data ----------
 const POSES = [
   { key: "tadasana", sa: "Tāḍāsana", en: "Mountain Pose", literal: "tāḍa = mountain + āsana = seat/pose", mnemonic: "Stand tall like a mountain." },
   { key: "adho-mukha-svanasana", sa: "Adho Mukha Śvānāsana", en: "Downward-Facing Dog", literal: "adho = downward, mukha = face, śvāna = dog", mnemonic: "Dog stretching face down." },
@@ -27,6 +27,7 @@ const POSES = [
   { key: "parivrtta-trikonasana", sa: "Parivṛtta Trikoṇāsana", en: "Revolved Triangle", literal: "parivṛtta = revolved", mnemonic: "Triangle with a twist." }
 ];
 
+// ---------- Utils ----------
 const shuffle = (arr) => {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -38,10 +39,11 @@ const shuffle = (arr) => {
 
 function useWeights(keys) {
   const [weights, setWeights] = useState(() => Object.fromEntries(keys.map(k => [k, 1])));
-  const bump = (key, ok) => setWeights(w => ({ ...w, [key]: Math.max(0.5, Math.min(10, (w[key] ?? 1) * (ok ? 0.9 : 1.35))) }));
+  const bump = (key, ok) =>
+    setWeights(w => ({ ...w, [key]: Math.max(0.5, Math.min(10, (w[key] ?? 1) * (ok ? 0.9 : 1.35))) }));
   const pickWeighted = () => {
     const entries = Object.entries(weights);
-    const total = entries.reduce((s, [,wt]) => s + wt, 0);
+    const total = entries.reduce((s, [, wt]) => s + wt, 0);
     let r = Math.random() * total;
     for (const [k, wt] of entries) { if ((r -= wt) <= 0) return k; }
     return entries[0][0];
@@ -49,6 +51,7 @@ function useWeights(keys) {
   return { bump, pickWeighted };
 }
 
+// ---------- Games ----------
 function Flashcards({ data, onResult, nextItemKey }) {
   const [flipped, setFlipped] = useState(false);
   const pose = data.find(p => p.key === nextItemKey) ?? data[0];
@@ -56,13 +59,18 @@ function Flashcards({ data, onResult, nextItemKey }) {
   return (
     <div className="grid gap-4">
       <div className="text-sm opacity-70">Flashcards. Tap to flip.</div>
-      <div className="relative w-full h-56 md:h-64 rounded-2xl shadow-lg cursor-pointer bg-white dark:bg-zinc-900"
-           onClick={() => setFlipped(f => !f)}
-           style={{ transformStyle:"preserve-3d", transition:"transform .5s", transform:`rotateY(${flipped?180:0}deg)` }}>
-        <div className="absolute inset-0 flex items-center justify-center p-6 text-center" style={{ backfaceVisibility:"hidden" }}>
-          <div><div className="text-2xl font-semibold">{pose.en}</div><div className="mt-2 text-sm opacity-70">Click to reveal Sanskrit</div></div>
+      <div
+        className="relative w-full h-56 md:h-64 rounded-2xl shadow-lg cursor-pointer bg-white dark:bg-zinc-900"
+        onClick={() => setFlipped(f => !f)}
+        style={{ transformStyle: "preserve-3d", transition: "transform .5s", transform: `rotateY(${flipped ? 180 : 0}deg)` }}
+      >
+        <div className="absolute inset-0 flex items-center justify-center p-6 text-center" style={{ backfaceVisibility: "hidden" }}>
+          <div>
+            <div className="text-2xl font-semibold">{pose.en}</div>
+            <div className="mt-2 text-sm opacity-70">Click to reveal Sanskrit</div>
+          </div>
         </div>
-        <div className="absolute inset-0 flex items-center justify-center p-6 text-center" style={{ backfaceVisibility:"hidden", transform:"rotateY(180deg)" }}>
+        <div className="absolute inset-0 flex items-center justify-center p-6 text-center" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
           <div>
             <div className="text-2xl font-semibold">{pose.sa}</div>
             <div className="mt-2 text-sm opacity-80">{pose.literal}</div>
@@ -81,8 +89,8 @@ function Flashcards({ data, onResult, nextItemKey }) {
 function MultipleChoice({ data, onResult, nextItemKey, onAdvance }) {
   const correct = data.find(p => p.key === nextItemKey) ?? data[0];
 
-  // Lock the options per question:
-  const [opts, setOpts] = React.useState([]);
+  // lock options per question
+  const [opts, setOpts] = useState([]);
   useEffect(() => {
     const choices = shuffle([
       correct,
@@ -99,12 +107,12 @@ function MultipleChoice({ data, onResult, nextItemKey, onAdvance }) {
   const choose = (opt) => {
     if (solved) return;
     const ok = opt.key === correct.key;
-    onResult(correct.key, ok); // record result (does NOT auto-advance)
+    onResult(correct.key, ok); // record only
     if (ok) {
       setSolved(true);
-      setTimeout(() => { onAdvance(); }, 900); // advance ONLY after correct
+      setTimeout(() => onAdvance(), 900); // advance after correct
     } else {
-      setWrongPicks(prev => new Set(prev).add(opt.key)); // keep it red
+      setWrongPicks(prev => new Set(prev).add(opt.key));
     }
   };
 
@@ -119,9 +127,7 @@ function MultipleChoice({ data, onResult, nextItemKey, onAdvance }) {
       <div className="text-sm opacity-70">Multiple choice — Which Sanskrit is “{correct.en}”?</div>
       <div className="grid gap-2">
         {opts.map(o => (
-          <button key={o.key}
-                  className={`px-3 py-2 rounded-xl shadow text-left ${btnClass(o)}`}
-                  onClick={() => choose(o)}>
+          <button key={o.key} className={`px-3 py-2 rounded-xl shadow text-left ${btnClass(o)}`} onClick={() => choose(o)}>
             {o.sa}
           </button>
         ))}
@@ -133,13 +139,12 @@ function MultipleChoice({ data, onResult, nextItemKey, onAdvance }) {
   );
 }
 
-
 function DragMatch({ data, onResult, batch = 6 }) {
-  const subset = React.useMemo(() => shuffle(data).slice(0, batch), [data, batch]);
-  const [pairs]   = React.useState(() => shuffle(subset.map(p => p.key))); // Sanskrit chips
-  const [targets] = React.useState(() => shuffle(subset.map(p => p.key))); // English drops
-  const [done, setDone] = React.useState([]);
-  const [selected, setSelected] = React.useState(null); // for tap-to-select on mobile
+  const subset = useMemo(() => shuffle(data).slice(0, batch), [data, batch]);
+  const [pairs] = useState(() => shuffle(subset.map(p => p.key)));   // Sanskrit
+  const [targets] = useState(() => shuffle(subset.map(p => p.key))); // English
+  const [done, setDone] = useState([]);
+  const [selected, setSelected] = useState(null); // mobile tap
 
   const handleMatch = (srcKey, dstKey) => {
     const ok = srcKey === dstKey;
@@ -150,11 +155,8 @@ function DragMatch({ data, onResult, batch = 6 }) {
 
   return (
     <div className="grid gap-3">
-      <div className="text-sm opacity-70">
-        Match English to Sanskrit. Drag on desktop, tap to select on mobile.
-      </div>
+      <div className="text-sm opacity-70">Match English to Sanskrit. Drag on desktop, tap on mobile.</div>
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Targets: English boxes */}
         <div className="grid gap-2">
           {targets.map(k => {
             const pose = data.find(p => p.key === k);
@@ -163,10 +165,7 @@ function DragMatch({ data, onResult, batch = 6 }) {
               <div key={k}
                    className={`p-3 rounded-xl border ${isDone ? "bg-emerald-50 dark:bg-emerald-900/40" : "bg-zinc-50 dark:bg-zinc-900"}`}
                    onDragOver={(e) => e.preventDefault()}
-                   onDrop={(e) => {
-                     const src = e.dataTransfer.getData("text/plain");
-                     handleMatch(src, k);
-                   }}
+                   onDrop={(e) => handleMatch(e.dataTransfer.getData("text/plain"), k)}
                    onClick={() => { if (selected) handleMatch(selected, k); }}>
                 <div className="font-medium">{pose.en}</div>
                 <div className="text-xs opacity-70">{pose.literal}</div>
@@ -175,8 +174,6 @@ function DragMatch({ data, onResult, batch = 6 }) {
             );
           })}
         </div>
-
-        {/* Sources: Sanskrit chips */}
         <div className="grid gap-2">
           {pairs.map(k => {
             const pose = data.find(p => p.key === k);
@@ -203,7 +200,11 @@ function TypeIt({ data, onResult, nextItemKey }) {
   const [val, setVal] = useState("");
   const [msg, setMsg] = useState(null);
   const norm = s => s.toLowerCase().replace(/[^a-z]/g, "");
-  const submit = () => { const ok = norm(val) === norm(pose.sa); setMsg(ok ? "Correct!" : `Oops: ${pose.sa}`); onResult(pose.key, ok); };
+  const submit = () => {
+    const ok = norm(val) === norm(pose.sa);
+    setMsg(ok ? "Correct!" : `Oops: ${pose.sa}`);
+    onResult(pose.key, ok);
+  };
   return (
     <div className="grid gap-3">
       <div className="text-sm opacity-70">Type the Sanskrit for “{pose.en}”. Accents optional.</div>
@@ -216,7 +217,7 @@ function TypeIt({ data, onResult, nextItemKey }) {
 }
 
 function MemoryMatch({ data, onResult, pairs = 6 }) {
-  const subset = useMemo(() => shuffle(data).slice(0,pairs), [data,pairs]);
+  const subset = useMemo(() => shuffle(data).slice(0, pairs), [data, pairs]);
   const cards = useMemo(() => shuffle(subset.flatMap(p => ([{ t:"en", k:p.key }, { t:"sa", k:p.key }]))), [subset]);
   const [open, setOpen] = useState([]);
   const [matched, setMatched] = useState([]);
@@ -252,6 +253,7 @@ function MemoryMatch({ data, onResult, pairs = 6 }) {
   );
 }
 
+// ---------- App Shell ----------
 const MODES = [
   { id: "flash", label: "Flashcards", icon: Play },
   { id: "mc", label: "Multiple Choice", icon: Flag },
@@ -264,10 +266,20 @@ export default function App() {
   const [mode, setMode] = useState("flash");
   const [filter, setFilter] = useState("");
   const [history, setHistory] = useState([]);
+
   const { bump, pickWeighted } = useWeights(POSES.map(p => p.key));
-  const filtered = useMemo(() =>
-    POSES.filter(p => p.sa.toLowerCase().includes(filter.toLowerCase()) || p.en.toLowerCase().includes(filter.toLowerCase()))
-  , [filter]);
+
+  // control current question explicitly
+  const [currentKey, setCurrentKey] = useState(() => pickWeighted());
+  const advance = () => setCurrentKey(pickWeighted());
+
+  const filtered = useMemo(
+    () => POSES.filter(p =>
+      p.sa.toLowerCase().includes(filter.toLowerCase()) ||
+      p.en.toLowerCase().includes(filter.toLowerCase())
+    ),
+    [filter]
+  );
 
   const todayKey = useMemo(() => {
     const d = new Date();
@@ -275,17 +287,14 @@ export default function App() {
     return POSES[idx % POSES.length].key;
   }, []);
 
-  // pickWeighted already exists from useWeights
-const { bump, pickWeighted } = useWeights(POSES.map(p => p.key));
+  const onResult = (key, ok) => {
+    bump(key, ok);
+    setHistory(h => [...h, { key, ok, at: Date.now() }]);
+  };
 
-const [currentKey, setCurrentKey] = useState(() => pickWeighted());
-const advance = () => setCurrentKey(pickWeighted());
-
-// Do NOT advance on every result; only when a game asks us to
-const onResult = (key, ok) => {
-  bump(key, ok);
-  setHistory(h => [...h, { key, ok, at: Date.now() }]);
-};
+  const correct = history.filter(h => h.ok).length;
+  const total = history.length;
+  const pct = total ? Math.round((correct/total)*100) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950 text-zinc-900 dark:text-zinc-50 p-4 md:p-8">
@@ -326,14 +335,29 @@ const onResult = (key, ok) => {
           </div>
         </section>
 
-     <main className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
-  {mode === "flash"  && <Flashcards  data={filtered} onResult={(k,ok)=>{ onResult(k,ok); advance(); }} nextItemKey={currentKey} />}
-  {mode === "mc"     && <MultipleChoice key={currentKey} data={filtered} onResult={onResult} nextItemKey={currentKey} onAdvance={advance} />}
-  {mode === "drag"   && <DragMatch    data={filtered} onResult={onResult} />}
-  {mode === "type"   && <TypeIt       data={filtered} onResult={(k,ok)=>{ onResult(k,ok); advance(); }} nextItemKey={currentKey} />}
-  {mode === "memory" && <MemoryMatch  data={filtered} onResult={onResult} />}
-</main>
+        <main className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
+          {mode === "flash" && (
+            <Flashcards data={filtered} nextItemKey={currentKey}
+              onResult={(k, ok) => { onResult(k, ok); advance(); }} />
+          )}
 
+          {mode === "mc" && (
+            <MultipleChoice key={currentKey}
+              data={filtered}
+              nextItemKey={currentKey}
+              onResult={onResult}
+              onAdvance={advance} />
+          )}
+
+          {mode === "drag" && <DragMatch data={filtered} onResult={onResult} />}
+
+          {mode === "type" && (
+            <TypeIt data={filtered} nextItemKey={currentKey}
+              onResult={(k, ok) => { onResult(k, ok); advance(); }} />
+          )}
+
+          {mode === "memory" && <MemoryMatch data={filtered} onResult={onResult} />}
+        </main>
       </div>
     </div>
   );
