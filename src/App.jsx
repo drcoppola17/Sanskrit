@@ -319,10 +319,10 @@ export default function App() {
     {MODES.map(m => (
       <button
         key={m.id}
-        className={`px-3 py-2 rounded-xl shadow flex items-center gap-2 ${mode===m.id?"bg-indigo-200 dark:bg-indigo-800":"bg-white dark:bg-zinc-800"}`}
-        onClick={()=>setMode(m.id)}
+        className={`px-3 py-2 rounded-xl shadow flex items-center gap-2 ${mode===m.id ? "bg-indigo-200 dark:bg-indigo-800" : "bg-white dark:bg-zinc-800"}`}
+        onClick={() => setMode(m.id)}
       >
-        <m.icon size={16}/>{m.label}
+        <m.icon size={16} />{m.label}
       </button>
     ))}
   </div>
@@ -335,11 +335,13 @@ export default function App() {
     <div className="text-sm opacity-80">{POSES.find(p=>p.key===todayKey)?.en}</div>
     <div className="text-xs opacity-70 mt-2">{POSES.find(p=>p.key===todayKey)?.literal}</div>
   </div>
+
   <div className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
     <div className="text-xs uppercase tracking-wide opacity-60">Session Stats</div>
     <div className="mt-2 text-sm">Correct: {correct}/{total} ({pct}%)</div>
     <div className="text-xs opacity-70 mt-2">Missed items appear more until you master them.</div>
   </div>
+
   <div className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
     <div className="text-xs uppercase tracking-wide opacity-60">Filter Poses</div>
     <input
@@ -350,7 +352,7 @@ export default function App() {
     />
   </div>
 </section>
-
+        
 <main className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
   {mode === "flash" && (
     <Flashcards data={filtered} nextItemKey={currentKey}
