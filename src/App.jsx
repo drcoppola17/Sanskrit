@@ -311,20 +311,70 @@ export default function App() {
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950 text-zinc-900 dark:text-zinc-50 p-4 md:p-8">
       <div className="max-w-4xl mx-auto grid gap-6">
         <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Sanskrit Yoga Pose Trainer</h1>
-            <div className="text-sm opacity-70">Make Sanskrit stick with play.</div>
-          </div>
-          <div className="flex gap-2">
-            {MODES.map(m => (
-              <button key={m.id}
-                className={`px-3 py-2 rounded-xl shadow flex items-center gap-2 ${mode===m.id?"bg-indigo-200 dark:bg-indigo-800":"bg-white dark:bg-zinc-800"}`}
-                onClick={()=>setMode(m.id)}>
-                <m.icon size={16}/>{m.label}
-              </button>
-            ))}
-          </div>
-        </header>
+  <div>
+    <h1 className="text-2xl md:text-3xl font-bold">Sanskrit Yoga Pose Trainer</h1>
+    <div className="text-sm opacity-70">Make Sanskrit stick with play.</div>
+  </div>
+  <div className="flex gap-2">
+    {MODES.map(m => (
+      <button
+        key={m.id}
+        className={`px-3 py-2 rounded-xl shadow flex items-center gap-2 ${mode===m.id?"bg-indigo-200 dark:bg-indigo-800":"bg-white dark:bg-zinc-800"}`}
+        onClick={()=>setMode(m.id)}
+      >
+        <m.icon size={16}/>{m.label}
+      </button>
+    ))}
+  </div>
+</header>
+
+<section className="grid md:grid-cols-3 gap-4">
+  <div className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
+    <div className="text-xs uppercase tracking-wide opacity-60">Pose of the Day</div>
+    <div className="mt-2 text-lg font-semibold">{POSES.find(p=>p.key===todayKey)?.sa}</div>
+    <div className="text-sm opacity-80">{POSES.find(p=>p.key===todayKey)?.en}</div>
+    <div className="text-xs opacity-70 mt-2">{POSES.find(p=>p.key===todayKey)?.literal}</div>
+  </div>
+  <div className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
+    <div className="text-xs uppercase tracking-wide opacity-60">Session Stats</div>
+    <div className="mt-2 text-sm">Correct: {correct}/{total} ({pct}%)</div>
+    <div className="text-xs opacity-70 mt-2">Missed items appear more until you master them.</div>
+  </div>
+  <div className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
+    <div className="text-xs uppercase tracking-wide opacity-60">Filter Poses</div>
+    <input
+      className="mt-2 w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800"
+      placeholder="Search English or Sanskrit"
+      value={filter}
+      onChange={(e)=>setFilter(e.target.value)}
+    />
+  </div>
+</section>
+
+<main className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
+  {mode === "flash" && (
+    <Flashcards data={filtered} nextItemKey={currentKey}
+      onResult={(k, ok) => { onResult(k, ok); advance(); }} />
+  )}
+
+  {mode === "mc" && (
+    <MultipleChoice key={currentKey}
+      data={filtered}
+      nextItemKey={currentKey}
+      onResult={onResult}
+      onAdvance={advance} />
+  )}
+
+  {mode === "drag" && <DragMatch data={filtered} onResult={onResult} />}
+
+  {mode === "type" && (
+    <TypeIt data={filtered} nextItemKey={currentKey}
+      onResult={(k, ok) => { onResult(k, ok); advance(); }} />
+  )}
+
+  {mode === "memory" && <MemoryMatch data={filtered} onResult={onResult} />}
+</main>
+
 
         <section className="grid md:grid-cols-3 gap-4">
           <div className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
