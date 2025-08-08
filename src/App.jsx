@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Play, Flag, Swords, Grid2X2, Type, Keyboard } from "lucide-react";
 
-// ---------- Data ----------
+/* ---------------- Data ---------------- */
 const POSES = [
   { key: "tadasana", sa: "Tāḍāsana", en: "Mountain Pose", literal: "tāḍa = mountain + āsana = seat/pose", mnemonic: "Stand tall like a mountain." },
   { key: "adho-mukha-svanasana", sa: "Adho Mukha Śvānāsana", en: "Downward-Facing Dog", literal: "adho = downward, mukha = face, śvāna = dog", mnemonic: "Dog stretching face down." },
@@ -27,7 +27,7 @@ const POSES = [
   { key: "parivrtta-trikonasana", sa: "Parivṛtta Trikoṇāsana", en: "Revolved Triangle", literal: "parivṛtta = revolved", mnemonic: "Triangle with a twist." }
 ];
 
-// ---------- Utils ----------
+/* --------------- Utils --------------- */
 const shuffle = (arr) => {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -38,9 +38,14 @@ const shuffle = (arr) => {
 };
 
 function useWeights(keys) {
-  const [weights, setWeights] = useState(() => Object.fromEntries(keys.map(k => [k, 1])));
+  const [weights, setWeights] = useState(() =>
+    Object.fromEntries(keys.map(k => [k, 1]))
+  );
   const bump = (key, ok) =>
-    setWeights(w => ({ ...w, [key]: Math.max(0.5, Math.min(10, (w[key] ?? 1) * (ok ? 0.9 : 1.35))) }));
+    setWeights(w => ({
+      ...w,
+      [key]: Math.max(0.5, Math.min(10, (w[key] ?? 1) * (ok ? 0.9 : 1.35))),
+    }));
   const pickWeighted = () => {
     const entries = Object.entries(weights);
     const total = entries.reduce((s, [, wt]) => s + wt, 0);
@@ -51,7 +56,7 @@ function useWeights(keys) {
   return { bump, pickWeighted };
 }
 
-// ---------- Games ----------
+/* --------------- Games --------------- */
 function Flashcards({ data, onResult, nextItemKey }) {
   const [flipped, setFlipped] = useState(false);
   const pose = data.find(p => p.key === nextItemKey) ?? data[0];
@@ -89,30 +94,32 @@ function Flashcards({ data, onResult, nextItemKey }) {
 function MultipleChoice({ data, onResult, nextItemKey, onAdvance }) {
   const correct = data.find(p => p.key === nextItemKey) ?? data[0];
 
-  // lock options per question
+  // Lock options per question
   const [opts, setOpts] = useState([]);
   useEffect(() => {
-    const choices = shuffle([
-      correct,
-      ...shuffle(data.filter(p => p.key !== correct.key)).slice(0, 3),
-    ]);
-    setOpts(choices);
+    setOpts(
+      shuffle([
+        correct,
+        ...shuffle(data.filter(p => p.key !== correct.key)).slice(0, 3),
+      ])
+    );
   }, [correct.key, data]);
 
   const [wrongPicks, setWrongPicks] = useState(new Set());
   const [solved, setSolved] = useState(false);
 
+  // reset state when the question changes
   useEffect(() => { setWrongPicks(new Set()); setSolved(false); }, [correct.key]);
 
   const choose = (opt) => {
     if (solved) return;
     const ok = opt.key === correct.key;
-    onResult(correct.key, ok); // record only
+    onResult(correct.key, ok);            // record only
     if (ok) {
       setSolved(true);
-      setTimeout(() => onAdvance(), 900); // advance after correct
+      setTimeout(() => onAdvance(), 900); // advance ONLY after correct
     } else {
-      setWrongPicks(prev => new Set(prev).add(opt.key));
+      setWrongPicks(prev => new Set(prev).add(opt.key)); // keep wrong red
     }
   };
 
@@ -141,8 +148,8 @@ function MultipleChoice({ data, onResult, nextItemKey, onAdvance }) {
 
 function DragMatch({ data, onResult, batch = 6 }) {
   const subset = useMemo(() => shuffle(data).slice(0, batch), [data, batch]);
-  const [pairs] = useState(() => shuffle(subset.map(p => p.key)));   // Sanskrit
-  const [targets] = useState(() => shuffle(subset.map(p => p.key))); // English
+  const [pairs] = useState(() => shuffle(subset.map(p => p.key)));   // Sanskrit chips
+  const [targets] = useState(() => shuffle(subset.map(p => p.key))); // English boxes
   const [done, setDone] = useState([]);
   const [selected, setSelected] = useState(null); // mobile tap
 
@@ -253,7 +260,7 @@ function MemoryMatch({ data, onResult, pairs = 6 }) {
   );
 }
 
-// ---------- App Shell ----------
+/* ------------- App Shell ------------- */
 const MODES = [
   { id: "flash", label: "Flashcards", icon: Play },
   { id: "mc", label: "Multiple Choice", icon: Flag },
@@ -262,12 +269,16 @@ const MODES = [
   { id: "memory", label: "Memory", icon: Grid2X2 },
 ];
 
+function useAppWeights() {
+  return useWeights(POSES.map(p => p.key));
+}
+
 export default function App() {
-  const [mode, setMode] = useState("flash");
+  const [mode, setMode] = useState("mc"); // start on MC while testing
   const [filter, setFilter] = useState("");
   const [history, setHistory] = useState([]);
 
-  const { bump, pickWeighted } = useWeights(POSES.map(p => p.key));
+  const { bump, pickWeighted } = useAppWeights();
 
   // control current question explicitly
   const [currentKey, setCurrentKey] = useState(() => pickWeighted());
@@ -320,45 +331,4 @@ export default function App() {
             <div className="text-xs uppercase tracking-wide opacity-60">Pose of the Day</div>
             <div className="mt-2 text-lg font-semibold">{POSES.find(p=>p.key===todayKey)?.sa}</div>
             <div className="text-sm opacity-80">{POSES.find(p=>p.key===todayKey)?.en}</div>
-            <div className="text-xs opacity-70 mt-2">{POSES.find(p=>p.key===todayKey)?.literal}</div>
-          </div>
-          <div className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
-            <div className="text-xs uppercase tracking-wide opacity-60">Session Stats</div>
-            <div className="mt-2 text-sm">Correct: {correct}/{total} ({pct}%)</div>
-            <div className="text-xs opacity-70 mt-2">Missed items appear more until you master them.</div>
-          </div>
-          <div className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
-            <div className="text-xs uppercase tracking-wide opacity-60">Filter Poses</div>
-            <input className="mt-2 w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800"
-                   placeholder="Search English or Sanskrit"
-                   value={filter} onChange={(e)=>setFilter(e.target.value)} />
-          </div>
-        </section>
-
-        <main className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
-          {mode === "flash" && (
-            <Flashcards data={filtered} nextItemKey={currentKey}
-              onResult={(k, ok) => { onResult(k, ok); advance(); }} />
-          )}
-
-          {mode === "mc" && (
-            <MultipleChoice key={currentKey}
-              data={filtered}
-              nextItemKey={currentKey}
-              onResult={onResult}
-              onAdvance={advance} />
-          )}
-
-          {mode === "drag" && <DragMatch data={filtered} onResult={onResult} />}
-
-          {mode === "type" && (
-            <TypeIt data={filtered} nextItemKey={currentKey}
-              onResult={(k, ok) => { onResult(k, ok); advance(); }} />
-          )}
-
-          {mode === "memory" && <MemoryMatch data={filtered} onResult={onResult} />}
-        </main>
-      </div>
-    </div>
-  );
-}
+            <div className="text-xs opacity-70
