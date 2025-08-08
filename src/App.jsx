@@ -80,20 +80,43 @@ function Flashcards({ data, onResult, nextItemKey }) {
 
 function MultipleChoice({ data, onResult, nextItemKey }) {
   const correct = data.find(p => p.key === nextItemKey) ?? data[0];
-  const options = useMemo(() => shuffle([correct, ...shuffle(data.filter(p => p.key !== correct.key)).slice(0,3)]), [correct.key]);
+  const options = useMemo(() =>
+    shuffle([correct, ...shuffle(data.filter(p => p.key !== correct.key)).slice(0, 3)])
+  , [correct.key]);
+
   const [picked, setPicked] = useState(null);
-  const choose = (opt) => { if (picked) return; const ok = opt.key === correct.key; setPicked(opt.key); onResult(correct.key, ok); };
+
+  const choose = (opt) => {
+    if (picked) return;
+    const ok = opt.key === correct.key;
+    setPicked(opt.key);
+    onResult(correct.key, ok);
+    // Auto-advance after 1.5s
+    setTimeout(() => setPicked(null), 1500);
+  };
+
   return (
     <div className="grid gap-3">
-      <div className="text-sm opacity-70">Which Sanskrit is “{correct.en}”?</div>
+      <div className="text-sm opacity-70">Multiple choice — Which Sanskrit is “{correct.en}”?</div>
       <div className="grid gap-2">
-        {options.map(o => (
+        {options.map((o) => (
           <button key={o.key}
-                  className={`px-3 py-2 rounded-xl shadow text-left ${picked ? (o.key === correct.key ? "bg-emerald-200 dark:bg-emerald-800" : o.key === picked ? "bg-rose-200 dark:bg-rose-900" : "bg-zinc-100 dark:bg-zinc-800") : "bg-zinc-100 dark:bg-zinc-800"}`}
-                  onClick={() => choose(o)}>{o.sa}</button>
+            className={`px-3 py-2 rounded-xl shadow text-left ${
+              picked
+                ? o.key === correct.key
+                  ? "bg-emerald-200 dark:bg-emerald-800"
+                  : o.key === picked
+                  ? "bg-rose-200 dark:bg-rose-900"
+                  : "bg-zinc-100 dark:bg-zinc-800"
+                : "bg-zinc-100 dark:bg-zinc-800"
+            }`}
+            onClick={() => choose(o)}
+          >
+            {o.sa}
+          </button>
         ))}
       </div>
-      <div className="text-xs opacity-70">Hint: {correct.literal}</div>
+      {picked && <div className="text-xs opacity-70">Hint: {correct.literal}</div>}
     </div>
   );
 }
