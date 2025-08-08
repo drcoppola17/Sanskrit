@@ -80,34 +80,39 @@ function Flashcards({ data, onResult, nextItemKey }) {
 
 function MultipleChoice({ data, onResult, nextItemKey }) {
   const correct = data.find(p => p.key === nextItemKey) ?? data[0];
-  const options = useMemo(
-    () => shuffle([correct, ...shuffle(data.filter(p => p.key !== correct.key)).slice(0, 3)]),
-    [correct.key]
-  );
 
-  const [chosen, setChosen] = useState([]);   // array of keys you guessed wrong
-  const [solved, setSolved] = useState(false); // true after correct pick
+  // Lock the 4 options ONLY when the question changes
+  const [opts, setOpts] = React.useState([]);
+  useEffect(() => {
+    const choices = shuffle([
+      correct,
+      ...shuffle(data.filter(p => p.key !== correct.key)).slice(0, 3),
+    ]);
+    setOpts(choices);
+  }, [correct.key, data]);
 
-  useEffect(() => { setChosen([]); setSolved(false); }, [correct.key]);
+  const [wrongPicks, setWrongPicks] = useState(new Set()); // tracks wrong answers
+  const [solved, setSolved] = useState(false);
+
+  // Reset per question
+  useEffect(() => { setWrongPicks(new Set()); setSolved(false); }, [correct.key]);
 
   const choose = (opt) => {
-    if (solved) return;                     // already solved, wait for next
-    if (chosen.includes(opt.key)) return;   // already clicked wrong once
+    if (solved) return;
     const ok = opt.key === correct.key;
     onResult(correct.key, ok);
     if (ok) {
       setSolved(true);
-      setTimeout(() => { setChosen([]); setSolved(false); }, 900); // auto-advance
+      // advance will be triggered by parent changing nextItemKey
+      // (no timeout here; parent picks next question after onResult)
     } else {
-      setChosen((c) => [...c, opt.key]);    // mark this choice as wrong
+      setWrongPicks(prev => new Set(prev).add(opt.key));
     }
   };
 
   const btnClass = (o) => {
-    // When solved, show green on the correct one
     if (solved && o.key === correct.key) return "bg-emerald-200 dark:bg-emerald-800";
-    // While unsolved, any wrong picks you clicked are red
-    if (!solved && chosen.includes(o.key)) return "bg-rose-200 dark:bg-rose-900";
+    if (!solved && wrongPicks.has(o.key)) return "bg-rose-200 dark:bg-rose-900";
     return "bg-zinc-100 dark:bg-zinc-800";
   };
 
@@ -115,23 +120,23 @@ function MultipleChoice({ data, onResult, nextItemKey }) {
     <div className="grid gap-3">
       <div className="text-sm opacity-70">Multiple choice — Which Sanskrit is “{correct.en}”?</div>
       <div className="grid gap-2">
-        {options.map((o) => (
+        {opts.map(o => (
           <button
             key={o.key}
             className={`px-3 py-2 rounded-xl shadow text-left ${btnClass(o)}`}
             onClick={() => choose(o)}
-            disabled={solved} // brief lock during auto-advance
           >
             {o.sa}
           </button>
         ))}
       </div>
-      {!solved && chosen.length > 0 && (
+      {!solved && wrongPicks.size > 0 && (
         <div className="text-xs opacity-70">Hint: {correct.literal}</div>
       )}
     </div>
   );
 }
+
 
 function DragMatch({ data, onResult, batch = 6 }) {
   const subset = React.useMemo(() => shuffle(data).slice(0, batch), [data, batch]);
