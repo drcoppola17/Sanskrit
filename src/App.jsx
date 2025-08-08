@@ -80,19 +80,35 @@ function Flashcards({ data, onResult, nextItemKey }) {
 
 function MultipleChoice({ data, onResult, nextItemKey }) {
   const correct = data.find(p => p.key === nextItemKey) ?? data[0];
-  const options = useMemo(() =>
-    shuffle([correct, ...shuffle(data.filter(p => p.key !== correct.key)).slice(0, 3)])
-  , [correct.key]);
+  const options = useMemo(
+    () => shuffle([correct, ...shuffle(data.filter(p => p.key !== correct.key)).slice(0, 3)]),
+    [correct.key]
+  );
 
-  const [picked, setPicked] = useState(null);
+  const [chosen, setChosen] = useState([]);   // array of keys you guessed wrong
+  const [solved, setSolved] = useState(false); // true after correct pick
+
+  useEffect(() => { setChosen([]); setSolved(false); }, [correct.key]);
 
   const choose = (opt) => {
-    if (picked) return;
+    if (solved) return;                     // already solved, wait for next
+    if (chosen.includes(opt.key)) return;   // already clicked wrong once
     const ok = opt.key === correct.key;
-    setPicked(opt.key);
     onResult(correct.key, ok);
-    // Auto-advance after 1.5s
-    setTimeout(() => setPicked(null), 1500);
+    if (ok) {
+      setSolved(true);
+      setTimeout(() => { setChosen([]); setSolved(false); }, 900); // auto-advance
+    } else {
+      setChosen((c) => [...c, opt.key]);    // mark this choice as wrong
+    }
+  };
+
+  const btnClass = (o) => {
+    // When solved, show green on the correct one
+    if (solved && o.key === correct.key) return "bg-emerald-200 dark:bg-emerald-800";
+    // While unsolved, any wrong picks you clicked are red
+    if (!solved && chosen.includes(o.key)) return "bg-rose-200 dark:bg-rose-900";
+    return "bg-zinc-100 dark:bg-zinc-800";
   };
 
   return (
@@ -100,23 +116,19 @@ function MultipleChoice({ data, onResult, nextItemKey }) {
       <div className="text-sm opacity-70">Multiple choice — Which Sanskrit is “{correct.en}”?</div>
       <div className="grid gap-2">
         {options.map((o) => (
-          <button key={o.key}
-            className={`px-3 py-2 rounded-xl shadow text-left ${
-              picked
-                ? o.key === correct.key
-                  ? "bg-emerald-200 dark:bg-emerald-800"
-                  : o.key === picked
-                  ? "bg-rose-200 dark:bg-rose-900"
-                  : "bg-zinc-100 dark:bg-zinc-800"
-                : "bg-zinc-100 dark:bg-zinc-800"
-            }`}
+          <button
+            key={o.key}
+            className={`px-3 py-2 rounded-xl shadow text-left ${btnClass(o)}`}
             onClick={() => choose(o)}
+            disabled={solved} // brief lock during auto-advance
           >
             {o.sa}
           </button>
         ))}
       </div>
-      {picked && <div className="text-xs opacity-70">Hint: {correct.literal}</div>}
+      {!solved && chosen.length > 0 && (
+        <div className="text-xs opacity-70">Hint: {correct.literal}</div>
+      )}
     </div>
   );
 }
