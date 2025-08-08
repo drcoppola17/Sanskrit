@@ -275,11 +275,17 @@ export default function App() {
     return POSES[idx % POSES.length].key;
   }, []);
 
-  const nextKey = useMemo(() => pickWeighted(), [history]);
-  const onResult = (key, ok) => setHistory(h => (bump(key, ok), [...h, { key, ok, at: Date.now() }]));
-  const correct = history.filter(h => h.ok).length;
-  const total = history.length;
-  const pct = total ? Math.round(correct/total*100) : 0;
+  // pickWeighted already exists from useWeights
+const { bump, pickWeighted } = useWeights(POSES.map(p => p.key));
+
+const [currentKey, setCurrentKey] = useState(() => pickWeighted());
+const advance = () => setCurrentKey(pickWeighted());
+
+// Do NOT advance on every result; only when a game asks us to
+const onResult = (key, ok) => {
+  bump(key, ok);
+  setHistory(h => [...h, { key, ok, at: Date.now() }]);
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950 text-zinc-900 dark:text-zinc-50 p-4 md:p-8">
@@ -320,13 +326,14 @@ export default function App() {
           </div>
         </section>
 
-        <main className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
-          {mode === "flash" && <Flashcards data={filtered} onResult={onResult} nextItemKey={nextKey} />}
-          {mode === "mc" && <MultipleChoice data={filtered} onResult={onResult} nextItemKey={nextKey} />}
-          {mode === "drag" && <DragMatch data={filtered} onResult={onResult} />}
-          {mode === "type" && <TypeIt data={filtered} onResult={onResult} nextItemKey={nextKey} />}
-          {mode === "memory" && <MemoryMatch data={filtered} onResult={onResult} />}
-        </main>
+     <main className="p-4 rounded-2xl shadow bg-white dark:bg-zinc-900">
+  {mode === "flash"  && <Flashcards  data={filtered} onResult={(k,ok)=>{ onResult(k,ok); advance(); }} nextItemKey={currentKey} />}
+  {mode === "mc"     && <MultipleChoice key={currentKey} data={filtered} onResult={onResult} nextItemKey={currentKey} onAdvance={advance} />}
+  {mode === "drag"   && <DragMatch    data={filtered} onResult={onResult} />}
+  {mode === "type"   && <TypeIt       data={filtered} onResult={(k,ok)=>{ onResult(k,ok); advance(); }} nextItemKey={currentKey} />}
+  {mode === "memory" && <MemoryMatch  data={filtered} onResult={onResult} />}
+</main>
+
       </div>
     </div>
   );
